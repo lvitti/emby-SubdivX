@@ -1,9 +1,11 @@
-﻿using MediaBrowser.Controller.Providers;
+﻿using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using SharpCompress.Readers;
+using SubdivX.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,6 +21,9 @@ namespace SubdivX
     {
         private readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
+        private readonly ILibraryManager _libraryManager;
+        private PluginConfiguration GetOptions() => Plugin.Instance.Configuration;
+        private PluginConfiguration _configuration => Plugin.Instance.Configuration;
 
         public string Name => "SubdivX";
 
@@ -27,10 +32,12 @@ namespace SubdivX
         public int Order => 1;
 
         public SubdivXProvider(ILogger logger
-            , IJsonSerializer jsonSerializer)
+            , IJsonSerializer jsonSerializer
+            , ILibraryManager libraryManager)
         {
             _logger = logger;
             _jsonSerializer = jsonSerializer;
+            _libraryManager = libraryManager;
         }
 
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
@@ -38,17 +45,29 @@ namespace SubdivX
             await Task.Run(() =>
             {
                 var json = _jsonSerializer.SerializeToString(request);
-                _logger.Debug($"SubdivX Search: {json}");
+                _logger.Debug($"SubdivX Search | Request-> {json}");
             });
+
+            var configuration = GetOptions();
+
+            _logger.Debug($"SubdivX Search | UseOriginalTitle-> {configuration.UseOriginalTitle}");
 
             if (!string.Equals(request.TwoLetterISOLanguageName, "ES", StringComparison.OrdinalIgnoreCase))
             {
                 return Array.Empty<RemoteSubtitleInfo>();
             }
 
+            var item = _libraryManager.FindByPath(request.MediaPath, false);
+
             if (request.ContentType == VideoContentType.Episode)
             {
-                var query = $"{request.SeriesName} S{request.ParentIndexNumber:D2}E{request.IndexNumber:D2}";
+                var name = request.SeriesName;
+
+                if (configuration.UseOriginalTitle)
+                    if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
+                        name = item.OriginalTitle;
+
+                var query = $"{name} S{request.ParentIndexNumber:D2}E{request.IndexNumber:D2}";
 
                 var subtitles = SearchSubtitles(query);
                 if (subtitles?.Count > 0)
@@ -56,7 +75,12 @@ namespace SubdivX
             }
             else
             {
-                var query = $"{request.Name} {request.ProductionYear}";
+                var name = request.Name;
+                if (configuration.UseOriginalTitle)
+                    if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
+                        name = item.OriginalTitle;
+
+                var query = $"{name} {request.ProductionYear}";
 
                 var subtitles = SearchSubtitles(query);
                 if (subtitles?.Count > 0)
@@ -103,7 +127,7 @@ namespace SubdivX
             if (string.IsNullOrWhiteSpace(html))
                 return null;
 
-            string reListSub = "<a\\s+class=\"titulo_menu_izq\"\\s+href=\"http://www.subdivx.com/(?<id>[a-zA-Z\\w -]*).html\">";
+            string reListSub = "<a\\s+class=\"titulo_menu_izq\"\\s+href=\"http://www.subdivx.com/(?<id>[a-zA-Z\\w -]*).html\">(?<title>.*)</a></div>";
             reListSub += "+.*<img\\s+src=\"img/calif(?<calif>\\d)\\.gif\"\\s+class=\"detalle_calif\"\\s+name=\"detalle_calif\">+.*";
             reListSub += "\\n<div\\s+id=\"buscador_detalle_sub\">(?<desc>.*?)</div>+.*<b>Downloads:</b>(?<download>.+?)<b>Cds:</b>+.*<b>Subido\\ por:</b>\\s*<a.+?>(?<uploader>.+?)</a>.+?</div></div>";
             Regex re = new Regex(reListSub);
@@ -117,15 +141,30 @@ namespace SubdivX
             {
                 var sub = new RemoteSubtitleInfo()
                 {
+                    Name = "",
                     ThreeLetterISOLanguageName = "ESP",
                     Id = x.Groups["id"].Value,
-                    Name = x.Groups["desc"].Value,
                     CommunityRating = float.Parse(x.Groups["calif"].Value.Trim()),
                     DownloadCount = int.Parse(x.Groups["download"].Value.Trim().Replace(",", "").Replace(".", "")),
                     Author = x.Groups["uploader"].Value,
                     ProviderName = Name,
                     Format = "srt"
                 };
+                if (_configuration.ShowTitleInResult || _configuration.ShowUploaderInResult)
+                {
+                    if (_configuration.ShowTitleInResult)
+                        sub.Name = $"{x.Groups["title"].Value.Trim()}";
+
+                    if (_configuration.ShowUploaderInResult)
+                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: { x.Groups["uploader"].Value.Trim()}";
+
+                    sub.Comment = x.Groups["desc"].Value;
+                }
+                else
+                {
+                    sub.Name = x.Groups["desc"].Value;
+                }
+
                 subtitles.Add(sub);
             }
 

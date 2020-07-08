@@ -1,11 +1,14 @@
 ﻿using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using SubdivX.Configuration;
 using System;
+using System.Collections.Generic;
 
 namespace SubdivX
 {
-    public class Plugin : BasePlugin<PluginConfiguration>
+    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
             : base(applicationPaths, xmlSerializer)
@@ -17,5 +20,17 @@ namespace SubdivX
         public override string Name => "SubdivX";
         public override string Description => "Download subtitles for Movies and TV Shows using SubdivX";
         public static Plugin Instance { get; private set; }
+
+        public IEnumerable<PluginPageInfo> GetPages()
+        {
+            return new[]
+            {
+                new PluginPageInfo
+                {
+                    Name = this.Name,
+                    EmbeddedResourcePath = string.Format("{0}.Configuration.index.html", GetType().Namespace)
+                }
+            };
+        }
     }
 }
