@@ -123,11 +123,11 @@ namespace SubdivX
 
         private List<RemoteSubtitleInfo> SearchSubtitles(string query, int page)
         {
-            var html = GetHtml($"http://www.subdivx.com/index.php?accion=5&q={query}&pg={page}");
+            var html = GetHtml($"https://www.subdivx.com/index.php?accion=5&q={query}&pg={page}");
             if (string.IsNullOrWhiteSpace(html))
                 return null;
 
-            string reListSub = "<a\\s+class=\"titulo_menu_izq\"\\s+href=\"http://www.subdivx.com/(?<id>[a-zA-Z\\w -]*).html\">(?<title>.*)</a></div>";
+            string reListSub = "<a\\s+class=\"titulo_menu_izq\"\\s+href=\"https://www.subdivx.com/(?<id>[a-zA-Z\\w -]*).html\">(?<title>.*)</a></div>";
             reListSub += "+.*<img\\s+src=\"img/calif(?<calif>\\d)\\.gif\"\\s+class=\"detalle_calif\"\\s+name=\"detalle_calif\">+.*";
             reListSub += "\\n<div\\s+id=\"buscador_detalle_sub\">(?<desc>.*?)</div>+.*<b>Downloads:</b>(?<download>.+?)<b>Cds:</b>+.*<b>Subido\\ por:</b>\\s*<a.+?>(?<uploader>.+?)</a>.+?</div></div>";
             Regex re = new Regex(reListSub);
@@ -173,7 +173,7 @@ namespace SubdivX
 
         private SubtitleResponse DownloadSubtitle(string id)
         {
-            var html = GetHtml($"http://www.subdivx.com/{id}.html");
+            var html = GetHtml($"https://www.subdivx.com/{id}.html");
             if (string.IsNullOrWhiteSpace(html))
                 return null;
 
@@ -187,7 +187,7 @@ namespace SubdivX
             var fileId = mat2.Groups["id"].Value;
             var u = mat2.Groups["u"].Value;
 
-            var getSubtitleUrl = $"http://www.subdivx.com/bajar.php?id={fileId}&u={u}";
+            var getSubtitleUrl = $"https://www.subdivx.com/sub{u}/{fileId}";
 
             var fileStream = GetFileStream(getSubtitleUrl);
 
