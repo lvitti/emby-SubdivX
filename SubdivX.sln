@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30204.135
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubdivX", "SubdivX\SubdivX.csproj", "{49B9F611-B097-4856-A17E-B5C3D310A9F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubdivX", "SubdivX\SubdivX.csproj", "{49B9F611-B097-4856-A17E-B5C3D310A9F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Emby.Plugins.SubdivX.Test", "Emby.Plugins.SubdivX.Test\Emby.Plugins.SubdivX.Test.csproj", "{9CE753E2-CEF7-4449-8B77-4FC2550D7F80}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{49B9F611-B097-4856-A17E-B5C3D310A9F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{49B9F611-B097-4856-A17E-B5C3D310A9F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{49B9F611-B097-4856-A17E-B5C3D310A9F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CE753E2-CEF7-4449-8B77-4FC2550D7F80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CE753E2-CEF7-4449-8B77-4FC2550D7F80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CE753E2-CEF7-4449-8B77-4FC2550D7F80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CE753E2-CEF7-4449-8B77-4FC2550D7F80}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

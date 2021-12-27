@@ -22,8 +22,7 @@ namespace SubdivX
         private readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILibraryManager _libraryManager;
-        private PluginConfiguration GetOptions() => Plugin.Instance.Configuration;
-        private PluginConfiguration _configuration => Plugin.Instance.Configuration;
+        private PluginConfiguration _configuration => !string.IsNullOrWhiteSpace(Plugin.Instance.ConfigurationFileName) ? Plugin.Instance.Configuration : null;
 
         public string Name => "SubdivX";
 
@@ -48,9 +47,7 @@ namespace SubdivX
                 _logger.Debug($"SubdivX Search | Request-> {json}");
             });
 
-            var configuration = GetOptions();
-
-            _logger.Debug($"SubdivX Search | UseOriginalTitle-> {configuration.UseOriginalTitle}");
+            _logger.Debug($"SubdivX Search | UseOriginalTitle-> {_configuration?.UseOriginalTitle}");
 
             if (!string.Equals(request.TwoLetterISOLanguageName, "ES", StringComparison.OrdinalIgnoreCase))
             {
@@ -63,7 +60,7 @@ namespace SubdivX
             {
                 var name = request.SeriesName;
 
-                if (configuration.UseOriginalTitle)
+                if (_configuration?.UseOriginalTitle == true)
                     if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
                         name = item.OriginalTitle;
 
@@ -76,7 +73,7 @@ namespace SubdivX
             else
             {
                 var name = request.Name;
-                if (configuration.UseOriginalTitle)
+                if (_configuration?.UseOriginalTitle == true)
                     if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
                         name = item.OriginalTitle;
 
@@ -123,7 +120,8 @@ namespace SubdivX
 
         private List<RemoteSubtitleInfo> SearchSubtitles(string query, int page)
         {
-            var html = GetHtml($"https://www.subdivx.com/index.php?accion=5&q={query}&pg={page}");
+            var url = $"https://www.subdivx.com/index.php?buscar2={query}&accion=5&masdesc=&subtitulos=1&realiza_b=1&pg={page}";
+            var html = GetHtml(url);
             if (string.IsNullOrWhiteSpace(html))
                 return null;
 
@@ -150,7 +148,7 @@ namespace SubdivX
                     ProviderName = Name,
                     Format = "srt"
                 };
-                if (_configuration.ShowTitleInResult || _configuration.ShowUploaderInResult)
+                if (_configuration?.ShowTitleInResult == true || _configuration?.ShowUploaderInResult == true)
                 {
                     if (_configuration.ShowTitleInResult)
                         sub.Name = $"{x.Groups["title"].Value.Trim()}";
