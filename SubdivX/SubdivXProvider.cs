@@ -185,9 +185,19 @@ namespace SubdivX
             var fileId = mat2.Groups["id"].Value;
             var u = mat2.Groups["u"].Value;
 
-            var getSubtitleUrl = $"https://www.subdivx.com/sub{u}/{fileId}";
+            Stream fileStream;
+            try
+            {
+                var getSubtitleUrl = $"https://www.subdivx.com/sub{u}/{fileId}";
+                fileStream = GetFileStream(getSubtitleUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug($"Error al descargar subtitulo, ex: {ex.Message}");
 
-            var fileStream = GetFileStream(getSubtitleUrl);
+                var getSubtitleUrl = $"https://www.subdivx.com/sub/{fileId}";
+                fileStream = GetFileStream(getSubtitleUrl);
+            }
 
             return new SubtitleResponse()
             {
