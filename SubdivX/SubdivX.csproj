@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <FileVersion>1.0.4</FileVersion>
-    <AssemblyVersion>1.0.4</AssemblyVersion>
+    <FileVersion>1.0.5</FileVersion>
+    <AssemblyVersion>1.0.5</AssemblyVersion>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
@@ -16,10 +16,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="mediabrowser.server.core" Version="4.4.2" />
-    <PackageReference Include="SharpCompress" Version="0.30.1" />
+    <PackageReference Include="SharpCompress" Version="0.24.0" />
     <PackageReference Include="System.Memory" Version="4.5.4" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\system\Plugins\&quot; /y" />
+    <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\system\Plugins\&quot; /y&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\programdata\plugins\&quot; /y" />
   </Target>
 </Project>
