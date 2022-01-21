@@ -214,6 +214,9 @@ namespace SubdivX
 
             string data = null;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(urlAddress);
+            request.Headers["Host"] = "www.subdivx.com";
+            request.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36";
+
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
             if (response.StatusCode == HttpStatusCode.OK)
@@ -242,6 +245,9 @@ namespace SubdivX
 
             Stream fileStream = null;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(urlAddress);
+            request.Headers["Host"] = "www.subdivx.com";
+            request.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36";
+
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
                 if (response.StatusCode == HttpStatusCode.OK)

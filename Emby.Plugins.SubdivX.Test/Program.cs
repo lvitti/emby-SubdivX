@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using MediaBrowser.Controller.Data;
+﻿using MediaBrowser.Controller.Data;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Resolvers;
 using MediaBrowser.Controller.Sorting;
+using MediaBrowser.Controller.Subtitles;
 using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
@@ -18,6 +13,12 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using SubdivX;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Emby.Plugins.SubdivX.Test
 {
@@ -26,41 +27,41 @@ namespace Emby.Plugins.SubdivX.Test
         static void Main(string[] args)
         {
             new Plugin(null, null);
-            
+
             var provider = new SubdivXProvider(new Logger(), new JsonSerializer(), new MediaLibrary());
-            
-            TestShow(provider);
 
-            TestMovie(provider);
-
-            Console.WriteLine("Done");
-        }
-
-        private static void TestMovie(SubdivXProvider provider)
-        {
-            var subtitles = provider.Search(new MediaBrowser.Controller.Subtitles.SubtitleSearchRequest()
-            {
-                Name = "The Avengers",
-                ProductionYear = 2012,
-                ContentType = VideoContentType.Movie,
-                TwoLetterISOLanguageName = "ES",
-            }, CancellationToken.None).GetAwaiter().GetResult();
-
-            var item0 = (subtitles as List<MediaBrowser.Model.Providers.RemoteSubtitleInfo>)[0];
-
-            var subtitle = provider.GetSubtitles(item0.Id, CancellationToken.None).GetAwaiter().GetResult();
-        }
-
-        private static void TestShow(SubdivXProvider provider)
-        {
-            var subtitles = provider.Search(new MediaBrowser.Controller.Subtitles.SubtitleSearchRequest()
+            TestDownload(provider, new SubtitleSearchRequest()
             {
                 SeriesName = "Dexter: New Blood",
                 ParentIndexNumber = 1,
                 IndexNumber = 1,
                 ContentType = VideoContentType.Episode,
+                TwoLetterISOLanguageName = "ES"
+            });
+
+            TestDownload(provider, new SubtitleSearchRequest()
+            {
+                SeriesName = "The Batman",
+                ParentIndexNumber = 4,
+                IndexNumber = 6,
+                ContentType = VideoContentType.Episode,
+                TwoLetterISOLanguageName = "ES"
+            });
+
+            TestDownload(provider, new SubtitleSearchRequest()
+            {
+                Name = "The Avengers",
+                ProductionYear = 2012,
+                ContentType = VideoContentType.Movie,
                 TwoLetterISOLanguageName = "ES",
-            }, CancellationToken.None).GetAwaiter().GetResult();
+            });
+
+            Console.WriteLine("Done");
+        }
+
+        private static void TestDownload(SubdivXProvider provider, SubtitleSearchRequest request)
+        {
+            var subtitles = provider.Search(request, CancellationToken.None).GetAwaiter().GetResult();
 
             var item0 = (subtitles as List<MediaBrowser.Model.Providers.RemoteSubtitleInfo>)[0];
 
