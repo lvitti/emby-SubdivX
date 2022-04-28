@@ -271,13 +271,14 @@ namespace SubdivX
             {
                 while (reader.MoveToNextEntry())
                 {
-                    if (!reader.Entry.IsDirectory)
+                    if (!reader.Entry.IsDirectory && !reader.Entry.Key.StartsWith("__MACOSX"))
                     {
                         using (var entryStream = reader.OpenEntryStream())
                         {
                             entryStream.CopyTo(ms);
                             ms.Position = 0;
                         }
+                        break;
                     }
                 }
             }

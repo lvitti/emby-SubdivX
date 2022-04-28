@@ -29,6 +29,15 @@ namespace Emby.Plugins.SubdivX.Test
             new Plugin(null, null);
 
             var provider = new SubdivXProvider(new Logger(), new JsonSerializer(), new MediaLibrary());
+            
+            TestDownload(provider, new SubtitleSearchRequest()
+            {
+                SeriesName = "Resident Alien",
+                ParentIndexNumber = 2,
+                IndexNumber = 5,
+                ContentType = VideoContentType.Episode,
+                TwoLetterISOLanguageName = "ES"
+            });
 
             TestDownload(provider, new SubtitleSearchRequest()
             {
@@ -66,6 +75,14 @@ namespace Emby.Plugins.SubdivX.Test
             var item0 = (subtitles as List<MediaBrowser.Model.Providers.RemoteSubtitleInfo>)[0];
 
             var subtitle = provider.GetSubtitles(item0.Id, CancellationToken.None).GetAwaiter().GetResult();
+
+            var result = Encoding.UTF8.GetString((subtitle.Stream as MemoryStream).ToArray());
+
+            using (var fs = new FileStream("subtitle.txt", FileMode.OpenOrCreate))
+            {
+                subtitle.Stream.CopyTo(fs);
+                fs.Flush();
+            }
         }
     }
 
