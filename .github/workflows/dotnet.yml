@@ -1,10 +1,12 @@
-﻿name: dotnet package
+﻿name: dotnet release
 
-on: [push]
+on:
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,3 +24,15 @@ jobs:
         run: dotnet build --configuration Release --no-restore
       - name: Test
         run: dotnet test --no-restore --verbosity normal
+      - name: Publish
+        run: dotnet publish SubdivX/SubdivX.csproj -c Release -o release — nologo
+      - name: Pack
+        uses: papeloto/action-zip@v1
+        with:
+          files: release/SubdivX.dll
+          dest: SubdivX-${{ github.ref }}.zip
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: ${{ github.workspace }}/SubdivX-${{ github.ref }}.zip
