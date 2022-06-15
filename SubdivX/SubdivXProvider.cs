@@ -139,7 +139,7 @@ namespace SubdivX
                 var sub = new RemoteSubtitleInfo()
                 {
                     Name = "",
-                    ThreeLetterISOLanguageName = "ESP",
+                    Language = "ESP",
                     Id = x.Groups["id"].Value,
                     CommunityRating = float.Parse(x.Groups["calif"].Value.Trim()),
                     DownloadCount = int.Parse(x.Groups["download"].Value.Trim().Replace(",", "").Replace(".", "")),
