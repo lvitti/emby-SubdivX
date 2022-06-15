@@ -1,0 +1,10 @@
+﻿[*.cs]
+
+# IDE0090: Use 'new(...)'
+csharp_style_implicit_object_creation_when_type_is_apparent = false
+
+# IDE0063: Use simple 'using' statement
+csharp_prefer_simple_using_statement = false
+
+# IDE1006: Naming Styles
+dotnet_diagnostic.IDE1006.severity = none

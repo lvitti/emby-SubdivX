@@ -1,25 +1,23 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <FileVersion>1.0.6</FileVersion>
-    <AssemblyVersion>1.0.6</AssemblyVersion>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="Configuration\index.html" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Configuration\index.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="mediabrowser.server.core" Version="4.4.2" />
-    <PackageReference Include="SharpCompress" Version="0.24.0" />
-    <PackageReference Include="System.Memory" Version="4.5.4" />
-  </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\system\Plugins\&quot; /y&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\programdata\plugins\&quot; /y" />
-  </Target>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<FileVersion>1.0.9</FileVersion>
+		<AssemblyVersion>1.0.9</AssemblyVersion>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Remove="Configuration\index.html"/>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Configuration\index.html"/>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="SharpCompress" Version="0.24.0"/>
+		<PackageReference Include="System.Memory" Version="4.5.4"/>
+		<PackageReference Include="MediaBrowser.Server.Core" Version="4.7.1"/>
+	</ItemGroup>
+	<!-- <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\system\Plugins\&quot; /y
+xcopy &quot;$(TargetPath)&quot; &quot;C:\EmbyServer\programdata\plugins\&quot; /y"/>
+	</Target> -->
 </Project>

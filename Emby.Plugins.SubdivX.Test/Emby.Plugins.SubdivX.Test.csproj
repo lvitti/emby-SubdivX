@@ -9,4 +9,7 @@
     <ProjectReference Include="..\SubdivX\SubdivX.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\.editorconfig" />
+  </ItemGroup>
 </Project>

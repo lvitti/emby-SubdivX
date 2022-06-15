@@ -49,7 +49,7 @@ namespace SubdivX
 
             _logger.Debug($"SubdivX Search | UseOriginalTitle-> {_configuration?.UseOriginalTitle}");
 
-            if (!string.Equals(request.TwoLetterISOLanguageName, "ES", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(request.Language, "ES", StringComparison.OrdinalIgnoreCase))
             {
                 return Array.Empty<RemoteSubtitleInfo>();
             }
@@ -59,7 +59,6 @@ namespace SubdivX
             if (request.ContentType == VideoContentType.Episode)
             {
                 var name = request.SeriesName;
-
                 if (_configuration?.UseOriginalTitle == true)
                     if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
                         name = item.OriginalTitle;
