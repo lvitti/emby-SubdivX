@@ -36,6 +36,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          draft: true
+          draft: false
           name: Release ${{ env.RELEASE_VERSION }}
           files: ${{ github.workspace }}/SubdivX-${{ env.RELEASE_VERSION }}.zip
