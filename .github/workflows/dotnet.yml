@@ -25,7 +25,7 @@ jobs:
       - name: Test
         run: dotnet test --no-restore --verbosity normal
       - name: Publish
-        run: dotnet publish SubdivX/SubdivX.csproj -c Release -o release — nologo
+        run: dotnet publish SubdivX/SubdivX.csproj -c Release -o release
       - name: Pack
         uses: papeloto/action-zip@v1
         with:
