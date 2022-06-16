@@ -30,9 +30,10 @@ jobs:
         uses: papeloto/action-zip@v1
         with:
           files: release/SubdivX.dll
-          dest: SubdivX-${{ github.ref }}.zip
+          dest: SubdivX.${{ github.ref }}.zip
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: ${{ github.workspace }}/SubdivX-${{ github.ref }}.zip
+          name: Release ${{ github.ref }}
+          files: ${{ github.workspace }}/SubdivX.${{ github.ref }}.zip
