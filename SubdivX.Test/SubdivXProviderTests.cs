@@ -36,9 +36,9 @@ public class SubdivXProviderTests
         _provider = new SubdivXProvider(_logger.Object, _jsonSerializer.Object, _libraryManager.Object);
     }
 
-    [TestCase("The Batman", 4, 6, "X66XNjQ4MDc8X-the-batman-s04e06")]
-    [TestCase("Dexter: New Blood", 1, 1, "X66XNjMyNTM4X-dexter-new-blood-s01e01")]
-    [TestCase("Resident Alien", 2, 5, "X66XNjM5MzU0X-resident-alien-s02e05")]
+    [TestCase("The Batman", 4, 6, "X666XNjQ4MDc8X-the-batman-s04e06")]
+    [TestCase("Dexter: New Blood", 1, 1, "X666XNjMyNTM4X-dexter-new-blood-s01e01")]
+    [TestCase("Resident Alien", 2, 5, "X666XNjM5MzU0X-resident-alien-s02e05")]
     public async Task SearchSerie(string serieName, int season, int episode, string id)
     {
         var request = new SubtitleSearchRequest()
@@ -66,9 +66,9 @@ public class SubdivXProviderTests
         Assert.AreEqual(id, subtitle.Id);
     }
 
-    [TestCase("X66XNjM5MzU0X-resident-alien-s02e05", 59526)]
-    [TestCase("X66XNjMyNTM4X-dexter-new-blood-s01e01", 42670)]
-    [TestCase("X66XNjQ4MDc8X-the-batman-s04e06", 14902)]
+    [TestCase("X666XNjM5MzU0X-resident-alien-s02e05", 59526)]
+    [TestCase("X666XNjMyNTM4X-dexter-new-blood-s01e01", 42670)]
+    [TestCase("X666XNjQ4MDc8X-the-batman-s04e06", 14902)]
     public async Task DownloadSubtitle(string id, int length)
     {
         var subtitleResponse = await this._provider.GetSubtitles(id, CancellationToken.None);

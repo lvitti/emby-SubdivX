@@ -119,8 +119,9 @@ namespace SubdivX
 
         private List<RemoteSubtitleInfo> SearchSubtitles(string query, int page)
         {
-            var url = $"https://www.subdivx.com/index.php?buscar2={query}&accion=5&masdesc=&subtitulos=1&realiza_b=1&pg={page}";
-            var html = GetHtml(url);
+            var url = $"https://www.subdivx.com/index.php";
+            var param = $"buscar2={query}&accion=5&masdesc=&subtitulos=1&realiza_b=1&pg={page}";
+            var html = GetHtml(url, "POST", param);
             if (string.IsNullOrWhiteSpace(html))
                 return null;
 
@@ -153,7 +154,7 @@ namespace SubdivX
                         sub.Name = $"{x.Groups["title"].Value.Trim()}";
 
                     if (_configuration.ShowUploaderInResult)
-                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: { x.Groups["uploader"].Value.Trim()}";
+                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.Groups["uploader"].Value.Trim()}";
 
                     sub.Comment = x.Groups["desc"].Value;
                 }
@@ -207,12 +208,25 @@ namespace SubdivX
             };
         }
 
-        private string GetHtml(string urlAddress)
+        private string GetHtml(string urlAddress, string method = "GET", string param = null)
         {
             _logger.Debug($"GetHtml Url: {urlAddress}");
 
             string data = null;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(urlAddress);
+            request.Method = method;
+            if (param != null)
+            {
+                var dataStream = Encoding.UTF8.GetBytes(param);
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.ContentLength = dataStream.Length;
+                using (var newStream = request.GetRequestStream())
+                {
+                    newStream.Write(dataStream, 0, dataStream.Length);
+                    newStream.Close();
+                }
+            }
+
             request.Headers["Host"] = "www.subdivx.com";
             request.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36";
 
