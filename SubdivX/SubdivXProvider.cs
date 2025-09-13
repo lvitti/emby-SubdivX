@@ -22,9 +22,7 @@ namespace SubdivX
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILibraryManager _libraryManager;
 
-        private PluginConfiguration _configuration => !string.IsNullOrWhiteSpace(Plugin.Instance.ConfigurationFileName)
-            ? Plugin.Instance.Configuration
-            : null;
+        private PluginConfiguration _configuration => Plugin.Instance.GetConfiguration();
 
         public string Name => "SubdivX";
 
@@ -103,13 +101,14 @@ namespace SubdivX
 
         private List<RemoteSubtitleInfo> SearchSubtitles(string query)
         {
-            const string url = "https://www.subdivx.com/inc/ajax.php";
-            var data = GetJson<SearchResponse>(url, "POST", new Dictionary<string, string>
+            SubdivxAjaxResponse data;
+            using (var client = new HttpClient())
             {
-                { "tabla", "resultados" },
-                { "buscar", query },
-            });
-
+                var fs = new FlareSolverrClientNetStd(_configuration.FlareSolverrUrl, "subdivx", _jsonSerializer, client);
+                var svc = new SubdivxServiceNetStd(fs, _jsonSerializer);
+                data = svc.AjaxWithRecoveryAsync(query, 1, CancellationToken.None).Result;
+            }
+            
             var subtitles = new List<RemoteSubtitleInfo>();
             foreach (var x in data.aaData)
             {
@@ -124,14 +123,17 @@ namespace SubdivX
                     ProviderName = Name,
                     Format = "srt"
                 };
-                if (_configuration?.ShowTitleInResult == true || _configuration?.ShowUploaderInResult == true)
+                if (_configuration?.ShowTitleInResult == true || _configuration?.ShowUploaderInResult == true || _configuration?.ShowDescriptionInResult == true)
                 {
                     if (_configuration.ShowTitleInResult)
                         sub.Name = x.titulo;
 
+                    if (_configuration.ShowDescriptionInResult)
+                        sub.Name += (_configuration.ShowDescriptionInResult ? " | " : "") + $"Desc: {x.descargas}";
+                    
                     if (_configuration.ShowUploaderInResult)
                         sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.nick}";
-
+                    
                     sub.Comment = x.descripcion;
                 }
                 else
@@ -172,7 +174,7 @@ namespace SubdivX
                     }
                     catch (Exception ex2)
                     {
-                        _logger.Debug($"Error al descargar subtitulo, ex: {ex.Message}");
+                        _logger.Debug($"Error downloading subtitle, ex: {ex2.Message}");
                         iteration++;
                     }
                 }
@@ -186,25 +188,7 @@ namespace SubdivX
                 Stream = fileStream
             };
         }
-
-        private T GetJson<T>(string urlAddress, string method = "POST", Dictionary<string, string> parameters = null)
-        {
-            _logger.Debug($"GetJson Url: {urlAddress}");
-
-            using (var client = new HttpClient())
-            {
-                var content = new FormUrlEncodedContent(parameters);
-
-                client.DefaultRequestHeaders.Host = "www.subdivx.com";
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
-                var response = client.PostAsync(urlAddress, content).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
-
-                var jsonResponseString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                return _jsonSerializer.DeserializeFromString<T>(jsonResponseString);
-            }
-        }
-
+        
         private Stream GetFileStream(string urlAddress)
         {
             _logger.Debug($"GetFileStream Url: {urlAddress}");

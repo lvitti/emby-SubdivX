@@ -1,0 +1,7 @@
+{
+  "UseOriginalTitle": false,
+  "ShowTitleInResult": true,
+  "ShowUploaderInResult": true,
+  "ShowDescriptionInResult": true,
+  "FlareSolverrUrl": "http://localhost:8191/v1"
+}

@@ -9,8 +9,6 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Serialization;
 using Moq;
 using NUnit.Framework;
 
@@ -19,26 +17,29 @@ namespace SubdivX.Test;
 public class SubdivXProviderTests
 {
     private SubdivXProvider _provider;
-    private Mock<ILogger> _logger;
-    private Mock<IJsonSerializer> _jsonSerializer;
     private Mock<ILibraryManager> _libraryManager;
     private readonly IFixture _fixture = new Fixture().Customize(new AutoMoqCustomization());
 
     [SetUp]
     public void Setup()
     {
-        _ = new Plugin(null, null);
+        var (appHost, logMgr, jsonSerializer, _, _) = TestHostFactory.BuildAppHost();
+        var testConfig = ConfigurationHelper.LoadConfig(jsonSerializer);
+        
+        // Partial mock: llama al ctor base (setea Plugin.Instance)
+        var pluginMock = new Moq.Mock<Plugin>(appHost, logMgr) { CallBase = true };
+        pluginMock
+            .Setup(p => p.GetConfiguration())
+            .Returns(testConfig);
 
-        _logger = new Mock<ILogger>();
-        _jsonSerializer = new Mock<IJsonSerializer>();
+        _ = pluginMock.Object;
+        
         _libraryManager = new Mock<ILibraryManager>();
-
-        var fakeJsonSerializer = new JsonSerializer();
-
-        _jsonSerializer.Setup(repo => repo.DeserializeFromString<SearchResponse>(It.IsAny<string>()))
-            .Returns((string text) => fakeJsonSerializer.DeserializeFromString<SearchResponse>(text));
-
-        _provider = new SubdivXProvider(_logger.Object, _jsonSerializer.Object, _libraryManager.Object);
+        _provider = new SubdivXProvider(
+            logMgr.GetLogger(nameof(SubdivXProvider)), 
+            jsonSerializer, 
+            _libraryManager.Object
+        );
     }
 
     [TestCase("The Batman", 4, 6, "64807")]
