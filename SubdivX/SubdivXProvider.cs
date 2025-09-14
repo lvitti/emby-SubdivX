@@ -155,31 +155,17 @@ namespace SubdivX
             var maxIterations = 10;
             do
             {
+                
                 try
                 {
-                    var getSubtitleUrl = iteration == 0
-                        ? $"https://www.subdivx.com/sub/{id}.rar"
-                        : $"https://www.subdivx.com/sub{iteration}/{id}.rar";
-                 
+                    var getSubtitleUrl = $"https://subdivx.com/descargar.php?f=1&id={id}";
                     _logger.Debug($"Download subtitle, {getSubtitleUrl}");
                     fileStream = GetFileStream(getSubtitleUrl);
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        var getSubtitleUrl = iteration == 0
-                            ? $"https://www.subdivx.com/sub/{id}.zip"
-                            : $"https://www.subdivx.com/sub{iteration}/{id}.zip";
-                        
-                        _logger.Debug($"Download subtitle, {getSubtitleUrl}");
-                        fileStream = GetFileStream(getSubtitleUrl);
-                    }
-                    catch (Exception ex2)
-                    {
-                        _logger.Debug($"Error downloading subtitle, ex: {ex2.Message}");
-                        iteration++;
-                    }
+                    _logger.Debug($"Error downloading subtitle, ex: {ex.Message}");
+                    iteration++;
                 }
             } while (fileStream == null && iteration < maxIterations);
 
