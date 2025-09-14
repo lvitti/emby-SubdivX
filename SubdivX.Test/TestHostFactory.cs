@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using Moq;
+using NUnit.Framework;
 
 using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
@@ -39,10 +40,34 @@ namespace SubdivX.Test
 
             // ---------------------- ILogManager / ILogger ----------------------
             var logger = new Mock<ILogger>(MockBehavior.Loose);
-            logger.Setup(l => l.Info(It.IsAny<string>(), It.IsAny<object[]>()));
-            logger.Setup(l => l.Warn(It.IsAny<string>(), It.IsAny<object[]>()));
-            logger.Setup(l => l.Error(It.IsAny<string>(), It.IsAny<object[]>()));
-            logger.Setup(l => l.Debug(It.IsAny<string>(), It.IsAny<object[]>()));
+            logger
+                .Setup(l => l.Debug(It.IsAny<string>(), It.IsAny<object[]>()))
+                .Callback((string fmt, object[] args) =>
+                {
+                    var msg = (args != null && args.Length > 0) ? string.Format(fmt, args) : fmt;
+                    TestContext.Progress.WriteLine($"[DEBUG] {msg}");
+                });
+            logger
+                .Setup(l => l.Info(It.IsAny<string>(), It.IsAny<object[]>()))
+                .Callback((string fmt, object[] args) =>
+                {
+                    var msg = (args != null && args.Length > 0) ? string.Format(fmt, args) : fmt;
+                    TestContext.Progress.WriteLine($"[INFO ] {msg}");
+                });
+            logger
+                .Setup(l => l.Warn(It.IsAny<string>(), It.IsAny<object[]>()))
+                .Callback((string fmt, object[] args) =>
+                {
+                    var msg = (args != null && args.Length > 0) ? string.Format(fmt, args) : fmt;
+                    TestContext.Progress.WriteLine($"[WARN ] {msg}");
+                });
+            logger
+                .Setup(l => l.Error(It.IsAny<string>(), It.IsAny<object[]>()))
+                .Callback((string fmt, object[] args) =>
+                {
+                    var msg = (args != null && args.Length > 0) ? string.Format(fmt, args) : fmt;
+                    TestContext.Progress.WriteLine($"[ERROR] {msg}");
+                });
 
             var logMgr = new Mock<ILogManager>(MockBehavior.Loose);
             logMgr.Setup(m => m.GetLogger(It.IsAny<string>())).Returns(logger.Object);

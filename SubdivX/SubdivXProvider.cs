@@ -160,7 +160,8 @@ namespace SubdivX
                     var getSubtitleUrl = iteration == 0
                         ? $"https://www.subdivx.com/sub/{id}.rar"
                         : $"https://www.subdivx.com/sub{iteration}/{id}.rar";
-                    
+                 
+                    _logger.Debug($"Download subtitle, {getSubtitleUrl}");
                     fileStream = GetFileStream(getSubtitleUrl);
                 }
                 catch (Exception ex)
@@ -170,6 +171,8 @@ namespace SubdivX
                         var getSubtitleUrl = iteration == 0
                             ? $"https://www.subdivx.com/sub/{id}.zip"
                             : $"https://www.subdivx.com/sub{iteration}/{id}.zip";
+                        
+                        _logger.Debug($"Download subtitle, {getSubtitleUrl}");
                         fileStream = GetFileStream(getSubtitleUrl);
                     }
                     catch (Exception ex2)

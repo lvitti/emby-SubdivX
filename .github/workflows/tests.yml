@@ -14,11 +14,6 @@ jobs:
         image: ghcr.io/flaresolverr/flaresolverr:latest
         ports:
           - 8191:8191
-        options: >-
-          --health-cmd="curl --silent --fail http://localhost:8191/ || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     strategy:
       matrix:
         dotnet-version: ['6.0.x']
@@ -30,6 +25,18 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: Restore
         run: dotnet restore
+      - name: Wait for FlareSolverr
+        run: |
+          echo "Waiting for FlareSolverr to be ready..."
+          for i in {1..30}; do
+            if curl --silent --fail http://flaresolverr:8191/ >/dev/null; then
+              echo "FlareSolverr is up";
+              exit 0
+            fi
+            echo "Still waiting ($i/30)";
+            sleep 2
+          done
+          echo "FlareSolverr did not become ready in time" >&2
+          exit 1
       - name: Test
         run: FlareSolverrUrl="http://flaresolverr:8191/v1" dotnet test --no-restore --verbosity normal
-
