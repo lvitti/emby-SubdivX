@@ -155,7 +155,6 @@ namespace SubdivX
             var maxIterations = 10;
             do
             {
-                
                 try
                 {
                     var getSubtitleUrl = $"https://subdivx.com/descargar.php?f=1&id={id}";
@@ -182,25 +181,61 @@ namespace SubdivX
         {
             _logger.Debug($"GetFileStream Url: {urlAddress}");
 
-            Stream fileStream = null;
-            var request = (HttpWebRequest)WebRequest.Create(urlAddress);
-            request.Headers["Host"] = "www.subdivx.com";
-            request.Headers["User-Agent"] = UserAgent;
-
-            using (var response = (HttpWebResponse)request.GetResponse())
+            // 1) Use FlareSolverr to obtain solved cookies and UA for the final URL
+            FlareSolverrSolution solved;
+            using (var client = new HttpClient())
             {
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    using (var fileStreamZip = response.GetResponseStream())
-                    {
-                        fileStream = Unzip(fileStreamZip);
-                    }
+                var fs = new FlareSolverrClientNetStd(_configuration.FlareSolverrUrl, "subdivx", _jsonSerializer, client);
+                // Ask FlareSolverr to GET the same URL; we only need cookies and UA
+                solved = fs.RequestGetAsync(urlAddress, new { Accept = "*/*" }, 60000, CancellationToken.None).Result;
+            }
 
-                    response.Close();
+            // 2) Reuse cookies and UA to download the binary directly
+            var cookieContainer = new CookieContainer();
+            if (solved?.cookies != null)
+            {
+                foreach (var ck in solved.cookies)
+                {
+                    if (string.IsNullOrEmpty(ck?.name)) continue;
+                    try
+                    {
+                        var domain = (ck.domain ?? "www.subdivx.com").TrimStart('.');
+                        var path = string.IsNullOrEmpty(ck.path) ? "/" : ck.path;
+                        var cookie = new Cookie(ck.name, ck.value ?? string.Empty, path, domain)
+                        {
+                            HttpOnly = ck.httpOnly,
+                            Secure = ck.secure
+                        };
+                        cookieContainer.Add(new Uri("https://" + domain), cookie);
+                    }
+                    catch
+                    {
+                        // Ignore malformed cookies
+                    }
                 }
             }
 
-            return fileStream;
+            using (var handler = new HttpClientHandler
+            {
+                CookieContainer = cookieContainer,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            })
+            using (var http = new HttpClient(handler))
+            {
+                var ua = string.IsNullOrWhiteSpace(solved?.userAgent) ? UserAgent : solved.userAgent;
+                http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", ua);
+                http.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
+                http.Timeout = TimeSpan.FromSeconds(90);
+
+                using (var resp = http.GetAsync(urlAddress, HttpCompletionOption.ResponseHeadersRead).Result)
+                {
+                    resp.EnsureSuccessStatusCode();
+                    using (var fileStreamZip = resp.Content.ReadAsStreamAsync().Result)
+                    {
+                        return Unzip(fileStreamZip);
+                    }
+                }
+            }
         }
 
         private Stream Unzip(Stream zippedStream)
