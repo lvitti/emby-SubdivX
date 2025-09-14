@@ -29,7 +29,7 @@ jobs:
         run: |
           echo "Waiting for FlareSolverr to be ready..."
           for i in {1..30}; do
-            if curl --silent --fail http://flaresolverr:8191/ >/dev/null; then
+            if curl --silent --fail http://localhost:8191/ >/dev/null; then
               echo "FlareSolverr is up";
               exit 0
             fi
@@ -39,4 +39,16 @@ jobs:
           echo "FlareSolverr did not become ready in time" >&2
           exit 1
       - name: Test
-        run: FlareSolverrUrl="http://flaresolverr:8191/v1" dotnet test --no-restore --verbosity normal
+        run: FlareSolverrUrl="http://localhost:8191/v1" dotnet test --no-restore --verbosity normal
+      - name: FlareSolverr logs (on failure)
+        if: failure()
+        run: |
+          echo "Listing containers..."
+          docker ps -a || true
+          echo "Fetching FlareSolverr logs..."
+          cid=$(docker ps -a --filter "ancestor=ghcr.io/flaresolverr/flaresolverr:latest" --format "{{.ID}}" | head -n1)
+          if [ -n "$cid" ]; then
+            docker logs "$cid" || true
+          else
+            echo "No FlareSolverr container found by ancestor filter" >&2
+          fi
