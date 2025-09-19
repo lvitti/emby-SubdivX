@@ -25,6 +25,7 @@ public class SubdivXProviderTests
     {
         var (appHost, logMgr, jsonSerializer, _, _) = TestHostFactory.BuildAppHost();
         var testConfig = ConfigurationHelper.LoadConfig(jsonSerializer);
+        testConfig.SubXApiUrl = "http://localhost:8000";
         
         // Partial mock: llama al ctor base (setea Plugin.Instance)
         var pluginMock = new Moq.Mock<Plugin>(appHost, logMgr) { CallBase = true };
@@ -42,9 +43,9 @@ public class SubdivXProviderTests
         );
     }
 
-    [TestCase("The Batman", 4, 6, "64807")]
-    [TestCase("Dexter: New Blood", 1, 1, "632538")]
-    [TestCase("Resident Alien", 2, 5, "639354")]
+    [TestCase("The Batman", 4, 6, "901212")]
+    [TestCase("Dexter: New Blood", 1, 1, "694326")]
+    [TestCase("Resident Alien", 2, 5, "801288")]
     public async Task SearchSerie(string serieName, int season, int episode, string id)
     {
         var request = new SubtitleSearchRequest()
@@ -66,13 +67,10 @@ public class SubdivXProviderTests
         var subtitles = await this._provider.Search(request, CancellationToken.None);
 
         Assert.IsNotNull(subtitles);
-        Assert.GreaterOrEqual(subtitles.Count(), 1);
-
-        var subtitle = subtitles.OrderBy(p => long.Parse(p.Id)).ToList().ElementAt(0);
-        Assert.AreEqual(id, subtitle.Id);
+        Assert.IsNotNull(subtitles.FirstOrDefault(p => p.Id == id));
     }
 
-    [TestCase("Bad Boys: Ride or Die", 2024, "681473")]
+    [TestCase("Bad Boys: Ride or Die", 2024, "752980")]
     public async Task SearchMovie(string movieName, int movieYear, string id)
     {
         var request = new SubtitleSearchRequest()
@@ -93,16 +91,14 @@ public class SubdivXProviderTests
         var subtitles = await this._provider.Search(request, CancellationToken.None);
 
         Assert.IsNotNull(subtitles);
-        Assert.GreaterOrEqual(subtitles.Count(), 1);
 
-        var subtitle = subtitles.OrderBy(p => long.Parse(p.Id)).ToList().ElementAt(0);
-        Assert.AreEqual(id, subtitle.Id);
+        Assert.IsNotNull(subtitles.FirstOrDefault(p => p.Id == id));
     }
 
-    [TestCase("Resident Alien S02E05", "639354", 59526)]
-    [TestCase("Dexter: New Blood S01E01", "632538", 42670)]
-    [TestCase("The Batman S04E06", "64807", 14902)]
-    [TestCase("Bad Boys: Ride or Die 2024", "681473", 121267)]
+    [TestCase("Resident Alien S02E05", "801288", 59526)]
+    [TestCase("Dexter: New Blood S01E01", "694326", 42670)]
+    [TestCase("The Batman S04E06", "901212", 14902)]
+    [TestCase("Bad Boys: Ride or Die 2024", "752980", 121267)]
     public async Task DownloadSubtitle(string testName, string id, int length)
     {
         var subtitleResponse = await this._provider.GetSubtitles(id, CancellationToken.None);

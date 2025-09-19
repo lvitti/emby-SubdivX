@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using Emby.Web.GenericEdit;
+using MediaBrowser.Model.Attributes;
 
 namespace SubdivX.Configuration
 {
@@ -16,7 +17,10 @@ namespace SubdivX.Configuration
 
         public bool ShowDescriptionInResult { get; set; } = true;
 
-        [DisplayName("FlareSolverr URL")] 
-        public string FlareSolverrUrl { get; set; }
+        [DisplayName("SubX Api Token")] 
+        [Description("Read the README to learn how to get your token <a href='https://github.com/lvitti/emby-SubdivX/blob/master/README.md#subx-api-token'><i class=\"md-icon\">help</i></a>")]
+        [IsPassword]
+        public string Token { get; set; }
+        public string SubXApiUrl { get; set; } = "https://subx-api.duckdns.org";
     }
 }

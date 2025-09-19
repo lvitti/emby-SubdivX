@@ -9,8 +9,10 @@ using SubdivX.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -99,46 +101,68 @@ namespace SubdivX
             return subtitle ?? new SubtitleResponse();
         }
 
+        public class SearchResponse
+        {
+            public List<ItemResponse> items { get; set; }
+        }
+
+        public class ItemResponse
+        {
+            public int id { get; set; }
+            public string video_type{ get; set; }
+            public string title{ get; set; }
+            public int? season{ get; set; }
+            public int? episode{ get; set; }
+            public string? imdb_id{ get; set; }
+            public string? description{ get; set; }
+            public int downloads{ get; set; }
+            public string uploader_name{ get; set; }
+            public DateTime posted_at{ get; set; }
+        }
+        
         private List<RemoteSubtitleInfo> SearchSubtitles(string query)
         {
-            SubdivxAjaxResponse data;
-            using (var client = new HttpClient())
-            {
-                var fs = new FlareSolverrClientNetStd(_configuration.FlareSolverrUrl, "subdivx", _jsonSerializer, client);
-                var svc = new SubdivxServiceNetStd(fs, _jsonSerializer);
-                data = svc.AjaxWithRecoveryAsync(query, 1, CancellationToken.None).Result;
-            }
+            string url = $"{this._configuration.SubXApiUrl}/subtitles/search";
+            var data = GetJson<SearchResponse>(url, "GET",
+                new Dictionary<string, string>
+                {
+                    { "query", query },
+                },new Dictionary<string, string>
+                {
+                    { "Authorization", $"Bearer {this._configuration.Token}" },
+                    { "accept", "application/json" },
+                });
+            
             
             var subtitles = new List<RemoteSubtitleInfo>();
-            foreach (var x in data.aaData)
+            foreach (var x in data.items)
             {
                 var sub = new RemoteSubtitleInfo()
                 {
                     Name = "",
                     Language = "ESP",
                     Id = x.id.ToString(),
-                    CommunityRating = float.Parse(x.promedio.Trim()),
-                    DownloadCount = x.descargas,
-                    Author = x.nick,
+                    DownloadCount = x.downloads,
+                    Author = x.uploader_name,
                     ProviderName = Name,
                     Format = "srt"
                 };
                 if (_configuration?.ShowTitleInResult == true || _configuration?.ShowUploaderInResult == true || _configuration?.ShowDescriptionInResult == true)
                 {
                     if (_configuration.ShowTitleInResult)
-                        sub.Name = x.titulo;
+                        sub.Name = x.title;
 
                     if (_configuration.ShowDescriptionInResult)
-                        sub.Name += (_configuration.ShowDescriptionInResult ? " | " : "") + $"Desc: {x.descargas}";
+                        sub.Name += (_configuration.ShowDescriptionInResult ? " | " : "") + $"Desc: {x.description}";
                     
                     if (_configuration.ShowUploaderInResult)
-                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.nick}";
+                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.uploader_name}";
                     
-                    sub.Comment = x.descripcion;
+                    sub.Comment = x.description;
                 }
                 else
                 {
-                    sub.Name = x.descripcion;
+                    sub.Name = x.description;
                 }
 
                 subtitles.Add(sub);
@@ -147,6 +171,89 @@ namespace SubdivX
             return subtitles;
         }
 
+        private static bool TryParseAuthHeader(string value, out string scheme, out string parameter)
+        {
+            scheme = null;
+            parameter = null;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            var idx = value.IndexOf(' ');
+            if (idx <= 0 || idx >= value.Length - 1) return false;
+
+            scheme = value.Substring(0, idx);
+            parameter = value.Substring(idx + 1).Trim();
+            return true;
+        }
+        
+        private T GetJson<T>(
+            string urlAddress,
+            string method = "POST",
+            Dictionary<string, string> parameters = null,
+            Dictionary<string, string> headers = null)
+        {
+            _logger.Debug($"GetJson Url: {urlAddress} Method: {method}");
+
+            var httpMethod = new HttpMethod((method ?? "POST").ToUpperInvariant());
+
+            if ((httpMethod == HttpMethod.Get || httpMethod == HttpMethod.Delete) && parameters != null && parameters.Count > 0)
+            {
+                var qs = string.Join("&", parameters.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value ?? string.Empty)}"));
+                urlAddress += (urlAddress.Contains("?") ? "&" : "?") + qs;
+            }
+
+            using var client = new HttpClient();
+            using var request = new HttpRequestMessage(httpMethod, urlAddress);
+
+            if ((httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put || httpMethod.Method == "PATCH") && parameters != null && parameters.Count > 0)
+                request.Content = new FormUrlEncodedContent(parameters);
+
+            if (headers != null)
+            {
+                foreach (var kv in headers)
+                {
+                    var key = kv.Key;
+                    var value = kv.Value ?? string.Empty;
+
+                    if (key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string scheme, parameter;
+                        if (TryParseAuthHeader(value, out scheme, out parameter))
+                            request.Headers.Authorization = new AuthenticationHeaderValue(scheme, parameter);
+                        else
+                            request.Headers.TryAddWithoutValidation(key, value);
+                    }
+                    else if (key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.Headers.Accept.Clear();
+                        var parts = value.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var v in parts)
+                            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(v.Trim()));
+                    }
+                    else if (key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.Headers.UserAgent.Clear();
+                        request.Headers.UserAgent.ParseAdd(value);
+                    }
+                    else if (key.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.Headers.Host = value;
+                    }
+                    else if (!request.Headers.TryAddWithoutValidation(key, value))
+                    {
+                        if (request.Content == null)
+                            request.Content = new ByteArrayContent(new byte[0]);
+                        request.Content.Headers.TryAddWithoutValidation(key, value);
+                    }
+                }
+            }
+
+            var response = client.SendAsync(request).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponseString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return _jsonSerializer.DeserializeFromString<T>(jsonResponseString);
+        }
+        
         private SubtitleResponse DownloadSubtitle(string id)
         {
             Stream fileStream = null;
@@ -157,9 +264,9 @@ namespace SubdivX
             {
                 try
                 {
-                    var getSubtitleUrl = $"https://subdivx.com/descargar.php?f=1&id={id}";
+                    var getSubtitleUrl = $"{this._configuration.SubXApiUrl}/subtitles/{id}/download";
                     _logger.Debug($"Download subtitle, {getSubtitleUrl}");
-                    fileStream = GetFileStream(getSubtitleUrl);
+                    fileStream = GetFileStream(getSubtitleUrl, bearerToken: this._configuration.Token);
                 }
                 catch (Exception ex)
                 {
@@ -177,62 +284,69 @@ namespace SubdivX
             };
         }
         
-        private Stream GetFileStream(string urlAddress)
+        private Stream GetFileStream(string urlAddress, string bearerToken = null, Dictionary<string, string> headers = null)
         {
             _logger.Debug($"GetFileStream Url: {urlAddress}");
 
-            // 1) Use FlareSolverr to obtain solved cookies and UA for the final URL
-            FlareSolverrSolution solved;
-            using (var client = new HttpClient())
+            var handler = new HttpClientHandler
             {
-                var fs = new FlareSolverrClientNetStd(_configuration.FlareSolverrUrl, "subdivx", _jsonSerializer, client);
-                // Ask FlareSolverr to GET the same URL; we only need cookies and UA
-                solved = fs.RequestGetAsync(urlAddress, new { Accept = "*/*" }, 60000, CancellationToken.None).Result;
-            }
-
-            // 2) Reuse cookies and UA to download the binary directly
-            var cookieContainer = new CookieContainer();
-            if (solved?.cookies != null)
-            {
-                foreach (var ck in solved.cookies)
-                {
-                    if (string.IsNullOrEmpty(ck?.name)) continue;
-                    try
-                    {
-                        var domain = (ck.domain ?? "www.subdivx.com").TrimStart('.');
-                        var path = string.IsNullOrEmpty(ck.path) ? "/" : ck.path;
-                        var cookie = new Cookie(ck.name, ck.value ?? string.Empty, path, domain)
-                        {
-                            HttpOnly = ck.httpOnly,
-                            Secure = ck.secure
-                        };
-                        cookieContainer.Add(new Uri("https://" + domain), cookie);
-                    }
-                    catch
-                    {
-                        // Ignore malformed cookies
-                    }
-                }
-            }
-
-            using (var handler = new HttpClientHandler
-            {
-                CookieContainer = cookieContainer,
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            })
+            };
+
+            using (handler)
             using (var http = new HttpClient(handler))
             {
-                var ua = string.IsNullOrWhiteSpace(solved?.userAgent) ? UserAgent : solved.userAgent;
-                http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", ua);
-                http.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
                 http.Timeout = TimeSpan.FromSeconds(90);
 
-                using (var resp = http.GetAsync(urlAddress, HttpCompletionOption.ResponseHeadersRead).Result)
+                using (var req = new HttpRequestMessage(HttpMethod.Get, urlAddress))
                 {
-                    resp.EnsureSuccessStatusCode();
-                    using (var fileStreamZip = resp.Content.ReadAsStreamAsync().Result)
+                    req.Headers.TryAddWithoutValidation("Accept", "*/*");
+
+                    if (!string.IsNullOrEmpty(bearerToken))
+                        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+
+                    if (headers != null)
                     {
-                        return Unzip(fileStreamZip);
+                        foreach (var kv in headers)
+                        {
+                            var key = kv.Key;
+                            var value = kv.Value ?? string.Empty;
+
+                            if (key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string scheme, parameter;
+                                if (TryParseAuthHeader(value, out scheme, out parameter))
+                                    req.Headers.Authorization = new AuthenticationHeaderValue(scheme, parameter);
+                                else
+                                    req.Headers.TryAddWithoutValidation(key, value);
+                            }
+                            else if (key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                            {
+                                req.Headers.Accept.Clear();
+                                var parts = value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                for (int i = 0; i < parts.Length; i++)
+                                    req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(parts[i].Trim()));
+                            }
+                            else if (key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                            {
+                                req.Headers.UserAgent.Clear();
+                                req.Headers.UserAgent.ParseAdd(value);
+                            }
+                            else if (key.Equals("Host", StringComparison.OrdinalIgnoreCase))
+                                req.Headers.Host = value;
+                            else
+                                req.Headers.TryAddWithoutValidation(key, value);
+                        }
+                    }
+
+                    using (var resp = http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead).Result)
+                    {
+                        resp.EnsureSuccessStatusCode();
+
+                        using (var archiveStream = resp.Content.ReadAsStreamAsync().Result)
+                        {
+                            return Unzip(archiveStream);
+                        }
                     }
                 }
             }
