@@ -25,7 +25,6 @@ public class SubdivXProviderTests
     {
         var (appHost, logMgr, jsonSerializer, _, _) = TestHostFactory.BuildAppHost();
         var testConfig = ConfigurationHelper.LoadConfig(jsonSerializer);
-        testConfig.SubXApiUrl = "http://localhost:8000";
         
         // Partial mock: llama al ctor base (setea Plugin.Instance)
         var pluginMock = new Moq.Mock<Plugin>(appHost, logMgr) { CallBase = true };
