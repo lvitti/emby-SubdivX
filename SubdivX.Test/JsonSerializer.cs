@@ -12,7 +12,17 @@ public class JsonSerializer: IJsonSerializer
         throw new NotImplementedException();
     }
 
+    public void SerializeToStream(object obj, Stream stream, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+
     public void SerializeToFile(object obj, string file)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SerializeToFile(object obj, string file, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }
@@ -65,6 +75,12 @@ public class JsonSerializer: IJsonSerializer
 
     public string SerializeToString(object obj)
     {
+        var data =  System.Text.Json.JsonSerializer.Serialize(obj);
+        return data;
+    }
+
+    public string SerializeToString(object obj, JsonSerializerOptions options)
+    {
         throw new NotImplementedException();
     }
 
@@ -89,6 +105,11 @@ public class JsonSerializer: IJsonSerializer
     }
 
     public T DeserializeFromBytes<T>(ReadOnlySpan<byte> bytes)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DeserializePartialJsonInto(string json, object obj)
     {
         throw new NotImplementedException();
     }

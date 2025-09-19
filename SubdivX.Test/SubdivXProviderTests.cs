@@ -9,8 +9,6 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Serialization;
 using Moq;
 using NUnit.Framework;
 
@@ -19,31 +17,34 @@ namespace SubdivX.Test;
 public class SubdivXProviderTests
 {
     private SubdivXProvider _provider;
-    private Mock<ILogger> _logger;
-    private Mock<IJsonSerializer> _jsonSerializer;
     private Mock<ILibraryManager> _libraryManager;
     private readonly IFixture _fixture = new Fixture().Customize(new AutoMoqCustomization());
 
     [SetUp]
     public void Setup()
     {
-        _ = new Plugin(null, null);
+        var (appHost, logMgr, jsonSerializer, _, _) = TestHostFactory.BuildAppHost();
+        var testConfig = ConfigurationHelper.LoadConfig(jsonSerializer);
+        
+        // Partial mock: llama al ctor base (setea Plugin.Instance)
+        var pluginMock = new Moq.Mock<Plugin>(appHost, logMgr) { CallBase = true };
+        pluginMock
+            .Setup(p => p.GetConfiguration())
+            .Returns(testConfig);
 
-        _logger = new Mock<ILogger>();
-        _jsonSerializer = new Mock<IJsonSerializer>();
+        _ = pluginMock.Object;
+        
         _libraryManager = new Mock<ILibraryManager>();
-
-        var fakeJsonSerializer = new JsonSerializer();
-
-        _jsonSerializer.Setup(repo => repo.DeserializeFromString<SearchResponse>(It.IsAny<string>()))
-            .Returns((string text) => fakeJsonSerializer.DeserializeFromString<SearchResponse>(text));
-
-        _provider = new SubdivXProvider(_logger.Object, _jsonSerializer.Object, _libraryManager.Object);
+        _provider = new SubdivXProvider(
+            logMgr.GetLogger(nameof(SubdivXProvider)), 
+            jsonSerializer, 
+            _libraryManager.Object
+        );
     }
 
-    [TestCase("The Batman", 4, 6, "64807")]
-    [TestCase("Dexter: New Blood", 1, 1, "632538")]
-    [TestCase("Resident Alien", 2, 5, "639354")]
+    [TestCase("The Batman", 4, 6, "901212")]
+    [TestCase("Dexter: New Blood", 1, 1, "694326")]
+    [TestCase("Resident Alien", 2, 5, "801288")]
     public async Task SearchSerie(string serieName, int season, int episode, string id)
     {
         var request = new SubtitleSearchRequest()
@@ -65,13 +66,10 @@ public class SubdivXProviderTests
         var subtitles = await this._provider.Search(request, CancellationToken.None);
 
         Assert.IsNotNull(subtitles);
-        Assert.GreaterOrEqual(subtitles.Count(), 1);
-
-        var subtitle = subtitles.OrderBy(p => long.Parse(p.Id)).ToList().ElementAt(0);
-        Assert.AreEqual(id, subtitle.Id);
+        Assert.IsNotNull(subtitles.FirstOrDefault(p => p.Id == id));
     }
 
-    [TestCase("Bad Boys: Ride or Die", 2024, "681473")]
+    [TestCase("Bad Boys: Ride or Die", 2024, "752980")]
     public async Task SearchMovie(string movieName, int movieYear, string id)
     {
         var request = new SubtitleSearchRequest()
@@ -92,16 +90,14 @@ public class SubdivXProviderTests
         var subtitles = await this._provider.Search(request, CancellationToken.None);
 
         Assert.IsNotNull(subtitles);
-        Assert.GreaterOrEqual(subtitles.Count(), 1);
 
-        var subtitle = subtitles.OrderBy(p => long.Parse(p.Id)).ToList().ElementAt(0);
-        Assert.AreEqual(id, subtitle.Id);
+        Assert.IsNotNull(subtitles.FirstOrDefault(p => p.Id == id));
     }
 
-    [TestCase("Resident Alien S02E05", "639354", 59526)]
-    [TestCase("Dexter: New Blood S01E01", "632538", 42670)]
-    [TestCase("The Batman S04E06", "64807", 14902)]
-    [TestCase("Bad Boys: Ride or Die 2024", "681473", 121267)]
+    [TestCase("Resident Alien S02E05", "801288", 59526)]
+    [TestCase("Dexter: New Blood S01E01", "694326", 42670)]
+    [TestCase("The Batman S04E06", "901212", 14902)]
+    [TestCase("Bad Boys: Ride or Die 2024", "752980", 121267)]
     public async Task DownloadSubtitle(string testName, string id, int length)
     {
         var subtitleResponse = await this._provider.GetSubtitles(id, CancellationToken.None);

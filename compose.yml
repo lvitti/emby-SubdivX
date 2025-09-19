@@ -1,0 +1,11 @@
+services:
+  emby:
+    image: emby/embyserver
+    ports:
+      - 8096:8096 # HTTP port
+      - 8920:8920 # HTTPS port
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./Docker/plugins/SubdivX.dll:/system/plugins/SubdivX.dll
+      - ./Docker/media/:/media/
