@@ -9,11 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      flaresolverr:
-        image: ghcr.io/flaresolverr/flaresolverr:latest
-        ports:
-          - 8191:8191
     strategy:
       matrix:
         dotnet-version: ['6.0.x']
@@ -25,30 +20,7 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: Restore
         run: dotnet restore
-      - name: Wait for FlareSolverr
-        run: |
-          echo "Waiting for FlareSolverr to be ready..."
-          for i in {1..30}; do
-            if curl --silent --fail http://localhost:8191/ >/dev/null; then
-              echo "FlareSolverr is up";
-              exit 0
-            fi
-            echo "Still waiting ($i/30)";
-            sleep 2
-          done
-          echo "FlareSolverr did not become ready in time" >&2
-          exit 1
       - name: Test
-        run: FlareSolverrUrl="http://localhost:8191/v1" dotnet test --no-restore --verbosity normal
-      - name: FlareSolverr logs (on failure)
-        if: failure()
-        run: |
-          echo "Listing containers..."
-          docker ps -a || true
-          echo "Fetching FlareSolverr logs..."
-          cid=$(docker ps -a --filter "ancestor=ghcr.io/flaresolverr/flaresolverr:latest" --format "{{.ID}}" | head -n1)
-          if [ -n "$cid" ]; then
-            docker logs "$cid" || true
-          else
-            echo "No FlareSolverr container found by ancestor filter" >&2
-          fi
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: dotnet test --no-restore --verbosity normal
