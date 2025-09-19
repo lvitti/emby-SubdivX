@@ -84,14 +84,23 @@ public static class ConfigurationHelper
         }
 
         var type_config = typeof(PluginConfiguration);
+        // Read environment variables case-insensitively to support TOKEN vs Token, etc.
+        var allEnv = Environment.GetEnvironmentVariables();
+        var envDict = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (System.Collections.DictionaryEntry entry in allEnv)
+        {
+            var key = entry.Key?.ToString();
+            if (string.IsNullOrEmpty(key)) continue;
+            envDict[key] = entry.Value?.ToString();
+        }
+
         foreach (var prop in type_config.GetProperties())
         {
-            var envValue = Environment.GetEnvironmentVariable(prop.Name);
-            if (!string.IsNullOrEmpty(envValue))
-            {
-                object converted = Convert.ChangeType(envValue, prop.PropertyType);
-                prop.SetValue(config, converted);
-            }
+            if (!envDict.TryGetValue(prop.Name, out var envValue) || string.IsNullOrEmpty(envValue))
+                continue;
+
+            object converted = Convert.ChangeType(envValue, prop.PropertyType);
+            prop.SetValue(config, converted);
         }
 
         return config;

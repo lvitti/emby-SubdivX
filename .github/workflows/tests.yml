@@ -1,9 +1,6 @@
 name: dotnet tests
 
 on:
-  push:
-    branches:
-      - "**"
   pull_request:
 
 jobs:
