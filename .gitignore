@@ -352,3 +352,6 @@ MigrationBackup/
 .DS_Store
 
 config.override.json
+.idea/
+Docker/plugins
+Docker/media/
