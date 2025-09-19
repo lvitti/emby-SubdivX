@@ -28,7 +28,12 @@ public static class ConfigurationHelper
             var overrideJson = File.ReadAllText(overridePath);
             try
             {
-                using var doc = JsonDocument.Parse(overrideJson);
+                using var doc = JsonDocument.Parse(overrideJson, new JsonDocumentOptions
+                {
+                    CommentHandling = JsonCommentHandling.Skip, // ignore // y /* ... */
+                    AllowTrailingCommas = true                  // opcional: allows final comma in objects/arrays
+                });
+                
                 if (doc.RootElement.ValueKind == JsonValueKind.Object)
                 {
                     var type = typeof(PluginConfiguration);
