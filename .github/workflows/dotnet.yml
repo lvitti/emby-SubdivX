@@ -42,6 +42,8 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Test
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
         run: dotnet test --no-restore --verbosity normal
       - name: Publish
         run: dotnet publish SubdivX/SubdivX.csproj -c Release -o release /property:Version="${{ env.NET_VERSION }}"
