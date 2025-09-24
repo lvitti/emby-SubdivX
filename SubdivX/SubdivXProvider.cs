@@ -15,6 +15,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Model.Entities;
 
 namespace SubdivX
 {
@@ -24,7 +27,7 @@ namespace SubdivX
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILibraryManager _libraryManager;
 
-        private PluginConfiguration _configuration => Plugin.Instance.GetConfiguration();
+        private PluginConfiguration Configuration => Plugin.Instance.GetConfiguration();
 
         public string Name => "SubdivX";
 
@@ -33,20 +36,14 @@ namespace SubdivX
 
         public int Order => 1;
 
-        private const string UserAgent =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36";
-
-        public SubdivXProvider(ILogger logger
-            , IJsonSerializer jsonSerializer
-            , ILibraryManager libraryManager)
+        public SubdivXProvider(ILogger logger , IJsonSerializer jsonSerializer , ILibraryManager libraryManager)
         {
             _logger = logger;
             _jsonSerializer = jsonSerializer;
             _libraryManager = libraryManager;
         }
 
-        public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request,
-            CancellationToken cancellationToken)
+        public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
         {
             await Task.Run(() =>
             {
@@ -54,40 +51,52 @@ namespace SubdivX
                 _logger.Debug($"SubdivX Search | Request-> {json}");
             }, cancellationToken);
 
-            _logger.Debug($"SubdivX Search | UseOriginalTitle-> {_configuration?.UseOriginalTitle}");
-
-            if (!string.Equals(request.Language, "ES", StringComparison.OrdinalIgnoreCase))
+            if (!new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "es", "es-419", "es-MX"
+                }.Contains(request.Language?.Trim()))
             {
+                _logger.Debug($"SubdivX Search | skip, language-> {request.Language}");
                 return Array.Empty<RemoteSubtitleInfo>();
             }
 
             var item = _libraryManager.FindByPath(request.MediaPath, false);
-
-            if (request.ContentType == VideoContentType.Episode)
+            switch (item)
             {
-                var name = request.SeriesName;
-                if (_configuration?.UseOriginalTitle == true)
-                    if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
-                        name = item.OriginalTitle;
+                case Episode episode:
+                {
+                    var name = episode.Series.Name;
+                    if (Configuration.UseOriginalTitle)
+                        if (!string.IsNullOrWhiteSpace(episode.OriginalTitle))
+                            name = episode.OriginalTitle;
 
-                var query = $"{name} S{request.ParentIndexNumber:D2}E{request.IndexNumber:D2}";
+                    var query = $"{name} S{episode.Season.IndexNumber:D2}E{episode.IndexNumber:D2}";
+            
+                    var seriesImdb = episode.Series?.GetProviderId(MetadataProviders.Imdb);
+                    var seriesTmdb = episode.Series?.GetProviderId(MetadataProviders.Tmdb);
+            
+                    var subtitles = SearchSubtitles(query, seriesImdb, seriesTmdb);
+                    if (subtitles.Count > 0)
+                        return subtitles;
+                    break;
+                }
+                case Movie movie:
+                {
+                    var name = movie.Name;
+                    if (Configuration.UseOriginalTitle)
+                        if (!string.IsNullOrWhiteSpace(movie.OriginalTitle))
+                            name = movie.OriginalTitle;
 
-                var subtitles = SearchSubtitles(query);
-                if (subtitles?.Count > 0)
-                    return subtitles;
-            }
-            else
-            {
-                var name = request.Name;
-                if (_configuration?.UseOriginalTitle == true)
-                    if (!string.IsNullOrWhiteSpace(item.OriginalTitle))
-                        name = item.OriginalTitle;
+                    var query = $"{name} {movie.ProductionYear}";
 
-                var query = $"{name} {request.ProductionYear}";
-
-                var subtitles = SearchSubtitles(query);
-                if (subtitles?.Count > 0)
-                    return subtitles;
+                    var imdbId = movie.GetProviderId(MetadataProviders.Imdb);
+                    var tmdbId = movie.GetProviderId(MetadataProviders.Tmdb);
+            
+                    var subtitles = SearchSubtitles(query, imdbId, tmdbId);
+                    if (subtitles.Count > 0)
+                        return subtitles;
+                    break;
+                }
             }
 
             return Array.Empty<RemoteSubtitleInfo>();
@@ -120,19 +129,22 @@ namespace SubdivX
             public DateTime posted_at{ get; set; }
         }
         
-        private List<RemoteSubtitleInfo> SearchSubtitles(string query)
+        private List<RemoteSubtitleInfo> SearchSubtitles(string query, string? imdbId = null, string? tmdbId = null)
         {
-            string url = $"{this._configuration.SubXApiUrl}/subtitles/search";
+            string url = $"{this.Configuration.SubXApiUrl}/subtitles/search";
+            var searchParams = new Dictionary<string, string> { { "query", query } };
+
+            if (!string.IsNullOrWhiteSpace(imdbId))
+                searchParams.Add("imdb_id", imdbId);
+            if (!string.IsNullOrWhiteSpace(tmdbId))
+                searchParams.Add("tmdb_id", tmdbId);
+        
             var data = GetJson<SearchResponse>(url, "GET",
-                new Dictionary<string, string>
+                searchParams,new Dictionary<string, string>
                 {
-                    { "query", query },
-                },new Dictionary<string, string>
-                {
-                    { "Authorization", $"Bearer {this._configuration.Token}" },
+                    { "Authorization", $"Bearer {this.Configuration.Token}" },
                     { "accept", "application/json" },
                 });
-            
             
             var subtitles = new List<RemoteSubtitleInfo>();
             foreach (var x in data.items)
@@ -147,16 +159,16 @@ namespace SubdivX
                     ProviderName = Name,
                     Format = "srt"
                 };
-                if (_configuration?.ShowTitleInResult == true || _configuration?.ShowUploaderInResult == true || _configuration?.ShowDescriptionInResult == true)
+                if (Configuration?.ShowTitleInResult == true || Configuration?.ShowUploaderInResult == true || Configuration?.ShowDescriptionInResult == true)
                 {
-                    if (_configuration.ShowTitleInResult)
+                    if (Configuration.ShowTitleInResult)
                         sub.Name = x.title;
 
-                    if (_configuration.ShowDescriptionInResult)
-                        sub.Name += (_configuration.ShowDescriptionInResult ? " | " : "") + $"Desc: {x.description}";
+                    if (Configuration.ShowDescriptionInResult)
+                        sub.Name += (Configuration.ShowDescriptionInResult ? " | " : "") + $"Desc: {x.description}";
                     
-                    if (_configuration.ShowUploaderInResult)
-                        sub.Name += (_configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.uploader_name}";
+                    if (Configuration.ShowUploaderInResult)
+                        sub.Name += (Configuration.ShowTitleInResult ? " | " : "") + $"Uploader: {x.uploader_name}";
                     
                     sub.Comment = x.description;
                 }
@@ -264,9 +276,9 @@ namespace SubdivX
             {
                 try
                 {
-                    var getSubtitleUrl = $"{this._configuration.SubXApiUrl}/subtitles/{id}/download";
+                    var getSubtitleUrl = $"{this.Configuration.SubXApiUrl}/subtitles/{id}/download";
                     _logger.Debug($"Download subtitle, {getSubtitleUrl}");
-                    fileStream = GetFileStream(getSubtitleUrl, bearerToken: this._configuration.Token);
+                    fileStream = GetFileStream(getSubtitleUrl, bearerToken: this.Configuration.Token);
                 }
                 catch (Exception ex)
                 {
