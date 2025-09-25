@@ -131,7 +131,7 @@ namespace SubdivX
         
         private List<RemoteSubtitleInfo> SearchSubtitles(string query, string? imdbId = null, string? tmdbId = null)
         {
-            string url = $"{this.Configuration.SubXApiUrl}/subtitles/search";
+            string url = $"{this.Configuration.SubXApiUrl}/api/subtitles/search";
             var searchParams = new Dictionary<string, string> { { "query", query } };
 
             if (!string.IsNullOrWhiteSpace(imdbId))
@@ -258,7 +258,10 @@ namespace SubdivX
                     }
                 }
             }
-
+            
+            request.Headers.UserAgent.Clear();
+            request.Headers.UserAgent.ParseAdd( $"Emby-Plugin-Subdivx/{Plugin.Instance?.Version.ToString() ?? "unknown"}");
+            
             var response = client.SendAsync(request).GetAwaiter().GetResult();
             response.EnsureSuccessStatusCode();
 
@@ -276,7 +279,7 @@ namespace SubdivX
             {
                 try
                 {
-                    var getSubtitleUrl = $"{this.Configuration.SubXApiUrl}/subtitles/{id}/download";
+                    var getSubtitleUrl = $"{this.Configuration.SubXApiUrl}/api/subtitles/{id}/download";
                     _logger.Debug($"Download subtitle, {getSubtitleUrl}");
                     fileStream = GetFileStream(getSubtitleUrl, bearerToken: this.Configuration.Token);
                 }
