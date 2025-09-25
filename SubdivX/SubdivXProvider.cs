@@ -260,7 +260,7 @@ namespace SubdivX
             }
             
             request.Headers.UserAgent.Clear();
-            request.Headers.UserAgent.ParseAdd( $"Emby-Plugin-Subdivx/{Plugin.Instance?.Version.ToString() ?? "unknown"}");
+            request.Headers.UserAgent.ParseAdd( $"Emby-Plugin-Subdivx/{Plugin.Instance?.Version?.ToString() ?? "unknown"}");
             
             var response = client.SendAsync(request).GetAwaiter().GetResult();
             response.EnsureSuccessStatusCode();
