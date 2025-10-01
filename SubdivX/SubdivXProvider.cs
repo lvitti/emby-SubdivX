@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaBrowser.Common;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
@@ -26,6 +27,7 @@ namespace SubdivX
         private readonly ILogger _logger;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly ILibraryManager _libraryManager;
+        private readonly IApplicationHost _applicationHost;
 
         private PluginConfiguration Configuration => Plugin.Instance.GetConfiguration();
 
@@ -36,11 +38,12 @@ namespace SubdivX
 
         public int Order => 1;
 
-        public SubdivXProvider(ILogger logger , IJsonSerializer jsonSerializer , ILibraryManager libraryManager)
+        public SubdivXProvider(ILogger logger , IJsonSerializer jsonSerializer , ILibraryManager libraryManager, IApplicationHost applicationHost)
         {
             _logger = logger;
             _jsonSerializer = jsonSerializer;
             _libraryManager = libraryManager;
+            _applicationHost = applicationHost;
         }
 
         public async Task<IEnumerable<RemoteSubtitleInfo>> Search(SubtitleSearchRequest request, CancellationToken cancellationToken)
@@ -72,8 +75,8 @@ namespace SubdivX
 
                     var query = $"{name} S{episode.Season.IndexNumber:D2}E{episode.IndexNumber:D2}";
             
-                    var seriesImdb = episode.Series?.GetProviderId(MetadataProviders.Imdb);
-                    var seriesTmdb = episode.Series?.GetProviderId(MetadataProviders.Tmdb);
+                    var seriesImdb = episode.GetProviderId(MetadataProviders.Imdb) ?? episode.Series.GetProviderId(MetadataProviders.Imdb);
+                    var seriesTmdb = episode.GetProviderId(MetadataProviders.Tmdb) ?? episode.Series.GetProviderId(MetadataProviders.Tmdb);
             
                     var subtitles = SearchSubtitles(query, seriesImdb, seriesTmdb);
                     if (subtitles.Count > 0)
@@ -260,7 +263,9 @@ namespace SubdivX
             }
             
             request.Headers.UserAgent.Clear();
-            request.Headers.UserAgent.ParseAdd( $"Emby-Plugin-Subdivx/{Plugin.Instance?.Version?.ToString() ?? "unknown"}");
+            request.Headers.UserAgent.ParseAdd( 
+                $"Emby-Plugin-Subdivx/{Plugin.Instance?.Version?.ToString() ?? "unknown"} (Emby {_applicationHost?.ApplicationVersion?.ToString() ?? "unknown" })"
+                );
             
             var response = client.SendAsync(request).GetAwaiter().GetResult();
             response.EnsureSuccessStatusCode();

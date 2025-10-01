@@ -6,11 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture;
 using AutoFixture.AutoMoq;
+using MediaBrowser.Common;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Subtitles;
+using MediaBrowser.Model.Entities;
 using Moq;
 using NUnit.Framework;
 
@@ -38,11 +40,14 @@ public class SubdivXProviderTests
         
         _libraryManager = new FakeLibraryManager();
         BaseItem.LibraryManager = _libraryManager;
+
+        var applicationHost = new Mock<IApplicationHost>();
         
         _provider = new SubdivXProvider(
             logMgr.GetLogger(nameof(SubdivXProvider)), 
             jsonSerializer, 
-            _libraryManager
+            _libraryManager,
+            applicationHost.Object
         );
     }
 
@@ -59,7 +64,7 @@ public class SubdivXProviderTests
             OriginalTitle = serieName,
             Name = serieName
         };
-        // serie.SetProviderId(MetadataProvider.Imdb, "12345");
+        serie.SetProviderId(MetadataProviders.Imdb, "ttShowImdbId");
         _libraryManager.AddToLibrary(serie);
         
         var season = new Season()
@@ -82,6 +87,7 @@ public class SubdivXProviderTests
             IndexNumber = episodeNumber,
             OriginalTitle = serieName,
         };
+        episode.SetProviderId(MetadataProviders.Imdb, "ttEpisodeImdbId");
         _libraryManager.AddToLibrary(episode);
         
         var request = new SubtitleSearchRequest()
