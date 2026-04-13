@@ -7,7 +7,7 @@
 	<ItemGroup>
 		<PackageReference Include="SharpCompress" Version="0.24.0"/>
 		<PackageReference Include="System.Memory" Version="4.5.5"/>
-		<PackageReference Include="MediaBrowser.Server.Core" Version="4.8.11" />
+		<PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
 	</ItemGroup>
     
     <!-- TODO: Enable only on dev/IDE -->
