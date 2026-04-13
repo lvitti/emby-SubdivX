@@ -68,15 +68,23 @@ namespace SubdivX
             {
                 case Episode episode:
                 {
-                    var name = episode.Series.Name;
+                    // In Emby 4.9.x, episode.Series might be null, so we need to load it from LibraryManager
+                    var series = episode.Series ?? _libraryManager.GetItemById(episode.SeriesId) as MediaBrowser.Controller.Entities.TV.Series;
+                    if (series == null)
+                    {
+                        _logger.Warn($"Could not find Series for episode: {episode.Path}");
+                        return Array.Empty<RemoteSubtitleInfo>();
+                    }
+                    
+                    var name = series.Name;
                     if (Configuration.UseOriginalTitle)
                         if (!string.IsNullOrWhiteSpace(episode.OriginalTitle))
                             name = episode.OriginalTitle;
 
-                    var query = $"{name} S{episode.Season.IndexNumber:D2}E{episode.IndexNumber:D2}";
+                    var query = $"{name} S{episode.ParentIndexNumber:D2}E{episode.IndexNumber:D2}";
             
-                    var seriesImdb = episode.GetProviderId(MetadataProviders.Imdb) ?? episode.Series.GetProviderId(MetadataProviders.Imdb);
-                    var seriesTmdb = episode.GetProviderId(MetadataProviders.Tmdb) ?? episode.Series.GetProviderId(MetadataProviders.Tmdb);
+                    var seriesImdb = episode.GetProviderId(MetadataProviders.Imdb) ?? series.GetProviderId(MetadataProviders.Imdb);
+                    var seriesTmdb = episode.GetProviderId(MetadataProviders.Tmdb) ?? series.GetProviderId(MetadataProviders.Tmdb);
             
                     var subtitles = SearchSubtitles(query, seriesImdb, seriesTmdb);
                     if (subtitles.Count > 0)
