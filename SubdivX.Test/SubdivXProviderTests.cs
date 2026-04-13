@@ -21,7 +21,7 @@ namespace SubdivX.Test;
 public class SubdivXProviderTests
 {
     private SubdivXProvider _provider;
-    private FakeLibraryManager _libraryManager;
+    private LibraryManagerHelper _libraryManagerHelper;
     private readonly IFixture _fixture = new Fixture().Customize(new AutoMoqCustomization());
 
     [SetUp]
@@ -38,15 +38,15 @@ public class SubdivXProviderTests
 
         _ = pluginMock.Object;
         
-        _libraryManager = new FakeLibraryManager();
-        BaseItem.LibraryManager = _libraryManager;
+        _libraryManagerHelper = new LibraryManagerHelper();
+        BaseItem.LibraryManager = _libraryManagerHelper.Object;
 
         var applicationHost = new Mock<IApplicationHost>();
         
         _provider = new SubdivXProvider(
             logMgr.GetLogger(nameof(SubdivXProvider)), 
             jsonSerializer, 
-            _libraryManager,
+            _libraryManagerHelper.Object,
             applicationHost.Object
         );
     }
@@ -65,7 +65,6 @@ public class SubdivXProviderTests
             Name = serieName
         };
         serie.SetProviderId(MetadataProviders.Imdb, "ttShowImdbId");
-        _libraryManager.AddToLibrary(serie);
         
         var season = new Season()
         {
@@ -75,20 +74,23 @@ public class SubdivXProviderTests
             Path = $"/Shows/{serieName}/Season {seasonNumber}",
             IndexNumber = seasonNumber
         };
-        _libraryManager.AddToLibrary(season);
+        
+        // Add Series and Season to library FIRST before creating Episode
+        _libraryManagerHelper.AddToLibrary(serie);
+        _libraryManagerHelper.AddToLibrary(season);
         
         var episode = new Episode
         {
             Id = Guid.NewGuid(),
             InternalId = 3,
-            AlbumId = 2,
             SeriesId = 1,
+            ParentIndexNumber = seasonNumber,
             Path = $"/Shows/{serieName}/Season {seasonNumber}/{serieName} S{seasonNumber:00}E{episodeNumber:00}.mkv",
             IndexNumber = episodeNumber,
             OriginalTitle = serieName,
         };
         episode.SetProviderId(MetadataProviders.Imdb, "ttEpisodeImdbId");
-        _libraryManager.AddToLibrary(episode);
+        _libraryManagerHelper.AddToLibrary(episode);
         
         var request = new SubtitleSearchRequest()
         {
@@ -117,7 +119,7 @@ public class SubdivXProviderTests
             Name = movieName,
             ProductionYear = movieYear,
         };
-        _libraryManager.AddToLibrary(movie);
+        _libraryManagerHelper.AddToLibrary(movie);
         
         var request = new SubtitleSearchRequest()
         {
